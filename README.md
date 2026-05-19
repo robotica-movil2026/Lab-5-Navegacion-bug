@@ -23,3 +23,4 @@ Con uno de los algoritmos bug, hacer un recorrido entre dos puntos, evitando dos
 - El distanciamiento debe de ser suficiente para que el ev3 pueda sortear los obstaculos  
 - Se debe trazar una linea recta entre el origen y el final  
 **Superar laberintos**  
+a
