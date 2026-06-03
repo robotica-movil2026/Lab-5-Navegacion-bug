@@ -8,6 +8,7 @@ class Robot:
     ESTADO_GIRO_DER = 3
     ESTADO_AVANCE_CIEGO = 4
     ESTADO_FINALIZAR = 5
+    RETROCESO = 6
 
     def __init__(self):
         self.izq = 0
@@ -26,31 +27,45 @@ class Robot:
         self.der = potencia - error * kp
 
     def print_atributos(self):
-        print(f"Izquierda: {self.izq}, Derecha: {self.der}, Angulo: {self.angulo}, Color: {self.color}, Tactil: {self.tactil}, Ultrasonido: {self.ultrasonido}, Tiempo: {self.tiempo_inicial}, Estado: {self.estado}")
-    
-    def seguir_linea(self, kp, error, potencia):
-        self.lazo_motores(error, kp, potencia)
+        #print(f"Izquierda: {self.izq}, Derecha: {self.der}, Angulo: {self.angulo}, Color: {self.color}, Tactil: {self.tactil}, Ultrasonido: {self.ultrasonido}, Tiempo: {self.tiempo_inicial}, Estado: {self.estado}")
+        print(self.estado) 
+        return 0
+
+    def seguir_linea(self, kp, error, potencia, umbral): #el kp es la variable de suma
+        if self.color<umbral:
+            self.izq = potencia + kp
+            self.der = potencia - kp
+        
+        else:
+            self.der = potencia + kp
+            self.izq = potencia - kp
+            
+        #self.lazo_motores(error, kp, potencia)
+
         if self.meta != 0:
             self.estado = self.ESTADO_FINALIZAR
             return self.estado
         if self.tactil == 1:
             self.angulo_inicial = self.angulo
-            self.estado = self.ESTADO_GIRO_IZQ
+            self.estado = self.RETROCESO
+            #self.estado = self.ESTADO_GIRO_IZQ
+            self.tiempo_inicial = time.time()
+            self.retroceso_ciego(60, 4)
             return self.estado
         else:
             self.estado = self.ESTADO_SEGUIR_LINEA
             return self.estado
 
-    def rodeo(self, kp, error, potencia):
+    def rodeo(self, kp, error, potencia, umbral):
         self.lazo_motores(error, kp, potencia)
-        if (self.ultrasonido <= 15) and (self.color == 0):
+        if (self.ultrasonido <= 200):
             self.estado = self.ESTADO_RODEO
             return self.estado
-        if self.ultrasonido > 15:
+        if self.ultrasonido > 600:
             self.angulo_inicial = self.angulo
             self.estado = self.ESTADO_GIRO_DER
             return self.estado
-        if self.color == 1:
+        if self.color < umbral:
             self.estado = self.ESTADO_SEGUIR_LINEA
             return self.estado
 
@@ -105,6 +120,18 @@ class Robot:
         else:
             self.estado = self.ESTADO_AVANCE_CIEGO
             return self.estado
+    
+    def retroceso_ciego(self, potencia, tiempo_fin):
+        if tiempo_fin > (time.time() - self.tiempo_inicial):
+            self.izq = - potencia
+            self.der = - potencia
+            self.estado = self.RETROCESO
+            return self.estado
+        else:
+            self.estado = self.ESTADO_GIRO_IZQ
+            return self.estado
+
+        
 
     def finalizar(self):
         self.izq = 0
