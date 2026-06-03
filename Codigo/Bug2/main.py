@@ -29,7 +29,7 @@ ev3.speaker.beep(frequency=1000, duration=500)
 potencia = 100
 ref_color = 10
 ref_distancia = 150
-umbral=10
+umbral=15
 
 lista_estados=["ESTADO_SEGUIR_LINEA",
     "ESTADO_RODEO",
@@ -38,6 +38,9 @@ lista_estados=["ESTADO_SEGUIR_LINEA",
     "ESTADO_AVANCE_CIEGO",
     "ESTADO_FINALIZAR",
     "RETROCESO" ]
+
+
+
 
 while True:
     bot.color = color_sensor.reflection()
@@ -51,19 +54,39 @@ while True:
         error = ref_color - bot.color
         bot.seguir_linea(10, error, potencia,umbral)
     elif bot.estado == Robot.ESTADO_RODEO:
+        giroscopio.reset_angle(0)
         error = ref_distancia - bot.ultrasonido
-        bot.rodeo(0.5, error, potencia, umbral)
+        bot.rodeo(-0.01, error, potencia, umbral)
     elif bot.estado == Robot.ESTADO_GIRO_IZQ:
-        bot.giro_izq(potencia, 90)
+        bot.giro_izq(potencia, bot.angulo)
     elif bot.estado == Robot.ESTADO_GIRO_DER:
-        bot.giro_der(potencia, 90)
+        bot.giro_der(potencia, bot.angulo)
     elif bot.estado == Robot.ESTADO_AVANCE_CIEGO:
-        bot.avance_ciego(potencia, 0.5)
+        bot.avance_ciego(potencia, 120)
     elif bot.estado == Robot.ESTADO_FINALIZAR:
         break
     elif bot.estado == Robot.RETROCESO:
-        bot.retroceso_ciego(potencia, 1 )
+        giroscopio.reset_angle(0)
+        bot.retroceso_ciego(potencia, 1)
 
     # Ejecutar motores
     motor_izq.run(bot.izq)
     motor_der.run(bot.der)
+
+
+
+
+while True:
+    bot.color = color_sensor.reflection()
+    bot.tactil = tactil_sensor.pressed()
+    bot.ultrasonido = ultrasonido_sensor.distance()
+    bot.angulo = giroscopio.angle()
+    print(bot.ultrasonido)
+    print(bot.tactil)
+    if bot.tactil:
+        giroscopio.reset_angle(0)
+    wait(1000)
+
+
+#107 -150
+#500

@@ -58,10 +58,10 @@ class Robot:
 
     def rodeo(self, kp, error, potencia, umbral):
         self.lazo_motores(error, kp, potencia)
-        if (self.ultrasonido <= 200):
+        if (self.ultrasonido <= 150):
             self.estado = self.ESTADO_RODEO
             return self.estado
-        if self.ultrasonido > 600:
+        if self.ultrasonido > 500:
             self.angulo_inicial = self.angulo
             self.estado = self.ESTADO_GIRO_DER
             return self.estado
@@ -73,13 +73,13 @@ class Robot:
         """Calcula la diferencia más corta entre dos ángulos, evitando discontinuidades."""
         return (angulo_objetivo - angulo_actual + 180) % 360 - 180
 
-    def giro_izq(self, potencia, angulo_fin):
+    def giro_izq(self, potencia, angulo):
         # Asumiendo que girar a la izquierda aumenta el ángulo
-        target_angle = self.angulo_inicial + angulo_fin
-        error = self.diferencia_angular(target_angle, self.angulo)
+        #target_angle = self.angulo_inicial + angulo_fin
+        #error = self.diferencia_angular(target_angle, self.angulo)
         
         # Si el error es positivo y mayor al umbral, seguimos girando
-        if error > 2:
+        if angulo > -90:
             self.izq = -potencia
             self.der = potencia
             self.estado = self.ESTADO_GIRO_IZQ
@@ -91,13 +91,13 @@ class Robot:
             self.estado = self.ESTADO_RODEO
             return self.estado
         
-    def giro_der(self, potencia, angulo_fin):
+    def giro_der(self, potencia, angulo):
         # Asumiendo que girar a la derecha disminuye el ángulo
-        target_angle = self.angulo_inicial - angulo_fin
-        error = self.diferencia_angular(target_angle, self.angulo)
+        #target_angle = self.angulo_inicial - angulo_fin
+        #error = self.diferencia_angular(target_angle, self.angulo)
         
         # Si el error es negativo y menor al umbral negativo, seguimos girando
-        if error < -2:
+        if angulo < 90:
             self.izq = potencia
             self.der = -potencia
             self.estado = self.ESTADO_GIRO_DER
@@ -110,24 +110,25 @@ class Robot:
             self.estado = self.ESTADO_AVANCE_CIEGO
             return self.estado
     
-    def avance_ciego(self, potencia, tiempo_fin):
+    def avance_ciego(self, potencia, ultrasonido_meta):
         self.izq = potencia
         self.der = potencia
         tiempo = time.time() - self.tiempo_inicial
-        if tiempo > tiempo_fin:
+        if ultrasonido_meta > self.ultrasonido:
             self.estado = self.ESTADO_RODEO
             return self.estado
         else:
             self.estado = self.ESTADO_AVANCE_CIEGO
             return self.estado
     
-    def retroceso_ciego(self, potencia, tiempo_fin):
+    def retroceso_ciego(self, potencia, tiempo_fin):#, giroscopio):
         if tiempo_fin > (time.time() - self.tiempo_inicial):
             self.izq = - potencia
             self.der = - potencia
             self.estado = self.RETROCESO
             return self.estado
         else:
+            #giroscopio.reset_angle(0)
             self.estado = self.ESTADO_GIRO_IZQ
             return self.estado
 
