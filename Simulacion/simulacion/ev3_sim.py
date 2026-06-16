@@ -1,0 +1,150 @@
+
+import sys
+import os
+import time
+import math
+import numpy as np
+import sim
+import simConst
+from estados import Robot, bug_2
+
+print('[OK] Modulos cargados')
+
+print('Conectando a CoppeliaSim...')
+sim.simxFinish(-1)  # Cerrar conexiones previas
+
+clientID = sim.simxStart('127.0.0.1',19999,True,True,5000,5)
+
+if clientID != -1:
+    print(f'[OK] Conectado. clientID={clientID}')
+else:
+    print('[ERROR] No se pudo conectar. Verifica que CoppeliaSim esta abierto.')
+    print('         Tambien verifica que el puerto legacy (19997) esta habilitado.')
+
+def get_handle(clientID, name):
+    """Obtiene handle de un objeto por nombre."""
+    err, handle = sim.simxGetObjectHandle(
+        clientID, name, simConst.simx_opmode_blocking
+    )
+    if err != simConst.simx_return_ok:
+        print(f'  WARN: No se encontro {name} (err={err})')
+        return -1
+    return handle
+
+# Objetos del robot
+body = get_handle(clientID, 'ev3_body')
+motor_izq = get_handle(clientID, 'ev3_leftMotor')
+motor_der = get_handle(clientID, 'ev3_rightMotor')
+ultrasonido_sensor = get_handle(clientID, 'ev3_us')
+tactil_sensor = get_handle(clientID, 'ev3_tactil')
+color_sensor = get_handle(clientID, 'ev3_colorSensor')
+
+
+def set_motor_speed(left, right):
+    """Velocidad de ruedas en rad/s."""
+    sim.simxSetJointTargetVelocity(clientID, motor_izq, left, simConst.simx_opmode_oneshot)
+    sim.simxSetJointTargetVelocity(clientID, motor_der, right, simConst.simx_opmode_oneshot)
+
+def read_ultrasonic(sensor):
+    """Distancia del sensor ultrasonico en cm. 255 si no detecta."""
+    err, state, point, handle, normal = sim.simxReadProximitySensor(
+        clientID, sensor, simConst.simx_opmode_streaming
+    )
+    if err == simConst.simx_return_ok and state:
+        dist = math.sqrt(point[0]**2 + point[1]**2 + point[2]**2)
+        return round(dist * 100, 1)
+    return 255
+
+def tactil(sensor):
+    if read_ultrasonic(sensor)<3:
+        return 1
+    else:
+        return 0
+
+
+def read_color_reflection():
+    """
+    Reflexion del sensor de color (0=negro, 100=blanco).
+    Analiza la region central de la imagen del vision sensor.
+    """
+    err, res, img = sim.simxGetVisionSensorImage(
+        clientID, color_sensor, 0, simConst.simx_opmode_streaming
+    )
+    if err != simConst.simx_return_ok or res[0] == 0:
+        return None
+    
+    # Convertir imagen 1D a array (RGB, [resX, resY])
+    img_array = np.array(img, dtype=np.int32).reshape(res[1], res[0], 3)
+    
+    # Region central (~20%)
+    cx, cy = res[0], res[1]
+    m = min(res[0], res[1])
+    # Escala de grises ponderada
+    gray = (0.299 * img_array[:,:,0].astype(np.float32) +
+            0.587 * img_array[:,:,1].astype(np.float32) +
+            0.114 * img_array[:,:,2].astype(np.float32))
+    
+    return round(float(np.mean(gray)) / 255.0 * 100.0, 2)+100
+
+
+def read_gyro(giro_0):
+    """Angulo de orientacion en grados (yaw)."""
+    err, euler = sim.simxGetObjectOrientation(
+        clientID, body, -1, simConst.simx_opmode_streaming
+    )
+    if err == simConst.simx_return_ok:
+        angle = math.degrees(euler[2])-giro_0
+        return -round(((angle + 180) % 360) - 180, 1)
+    return 0.0
+
+def reset_gyro():
+    """Lee el angulo absoluto (yaw) para usarlo como nuevo cero."""
+    err, euler = sim.simxGetObjectOrientation(
+        clientID, body, -1, simConst.simx_opmode_blocking
+    )
+    if err == simConst.simx_return_ok:
+        return math.degrees(euler[2])
+    return 0.0
+
+bot = bug_2()
+
+giro_0 = reset_gyro()
+
+potencia = 1
+umbral=110
+umbral_meta=200
+error=0
+kp=0.02
+
+lista_estados=["ESTADO_SEGUIR_LINEA",
+    "ESTADO_RODEO",
+    "ESTADO_GIRO_IZQ",
+    "ESTADO_GIRO_DER",
+    "ESTADO_AVANCE_CIEGO",
+    "ESTADO_FINALIZAR",
+    "RETROCESO",
+    "GIRO_SEGUIDOR"]
+while True:
+    bot.color = read_color_reflection()
+    #print(bot.color)
+    if bot.color is None:
+        bot.color = 100
+    bot.tactil = tactil(tactil_sensor)
+    bot.ultrasonido = read_ultrasonic(ultrasonido_sensor)
+    bot.angulo = read_gyro(giro_0)
+    estado_anterior = bot.estado
+    if bot.estado==1:
+        error=8-bot.ultrasonido
+    bot.states(potencia, kp, umbral, error, 0.5)
+
+    if estado_anterior != bot.estado:
+        bot.tiempo_inicial = time.time()
+        print(lista_estados[bot.estado])
+        if bot.estado in [2,3,7]:
+            giro_0 = reset_gyro()
+            
+    
+    if bot.estado == 5:
+        break
+    # Ejecutar motores
+    set_motor_speed(-bot.der,-bot.izq)

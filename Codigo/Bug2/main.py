@@ -1,12 +1,13 @@
 #!/usr/bin/env pybricks-micropython
+from Codigo.Bug2.Estados import Robot
 from pybricks.hubs import EV3Brick
 from pybricks.ev3devices import Motor, ColorSensor, UltrasonicSensor, TouchSensor, GyroSensor
 from pybricks.parameters import Port
 from pybricks.tools import wait, StopWatch
 
-from Estados import Robot
+from Estados import bug_2
 
-bot = Robot()
+bot = bug_2()
 
 ev3 = EV3Brick()
 
@@ -37,45 +38,31 @@ lista_estados=["ESTADO_SEGUIR_LINEA",
     "ESTADO_GIRO_DER",
     "ESTADO_AVANCE_CIEGO",
     "ESTADO_FINALIZAR",
-    "RETROCESO" ]
-
-
-
+    "RETROCESO",
+    "GIRO_SEGUIDOR"]
 
 while True:
     bot.color = color_sensor.reflection()
-    print(bot.ultrasonido)
-    print(lista_estados[bot.estado])
+    #print(bot.ultrasonido)
+    #print(lista_estados[bot.estado])
     bot.tactil = tactil_sensor.pressed()
     bot.ultrasonido = ultrasonido_sensor.distance()
     bot.angulo = giroscopio.angle()
+    estado_anterior = bot.estado
+    bot.states(potencia, 0.1, umbral, 10, 1)
 
-    if bot.estado == Robot.ESTADO_SEGUIR_LINEA:
-        error = ref_color - bot.color
-        bot.seguir_linea(10, error, potencia,umbral)
-    elif bot.estado == Robot.ESTADO_RODEO:
-        giroscopio.reset_angle(0)
-        error = ref_distancia - bot.ultrasonido
-        bot.rodeo(-0.01, error, potencia, umbral)
-    elif bot.estado == Robot.ESTADO_GIRO_IZQ:
-        bot.giro_izq(potencia, bot.angulo)
-    elif bot.estado == Robot.ESTADO_GIRO_DER:
-        bot.giro_der(potencia, bot.angulo)
-    elif bot.estado == Robot.ESTADO_AVANCE_CIEGO:
-        bot.avance_ciego(potencia, 120)
-    elif bot.estado == Robot.ESTADO_FINALIZAR:
+    if estado_anterior != bot.estado:
+        print(lista_estados[bot.estado])
+        if bot.estado in [2,3,7]:
+            giroscopio.reset_angle(0)
+    
+    if bot.estado == 5:
         break
-    elif bot.estado == Robot.RETROCESO:
-        giroscopio.reset_angle(0)
-        bot.retroceso_ciego(potencia, 1)
-
     # Ejecutar motores
     motor_izq.run(bot.izq)
     motor_der.run(bot.der)
 
-
-
-
+'''
 while True:
     bot.color = color_sensor.reflection()
     bot.tactil = tactil_sensor.pressed()
@@ -86,7 +73,7 @@ while True:
     if bot.tactil:
         giroscopio.reset_angle(0)
     wait(1000)
-
+'''
 
 #107 -150
 #500
