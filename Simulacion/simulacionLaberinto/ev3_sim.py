@@ -1,97 +1,59 @@
-<<<<<<< HEAD:Simulacion/simulacionLaberinto/ev3_sim.py
 #EV3
-=======
-
-"""
-Controlador Bug2 para robot EV3 en CoppeliaSim.
-Implementa navegacion seguidor de linea con rodeo de obstaculos.
-"""
->>>>>>> a0f01d8306461434f9c72346b39c8f72ff11cfb9:Simulacion/simulacion/ev3_sim.py
 import sys
+import os
 import time
 import math
-import signal
 import numpy as np
 import sim
 import simConst
 from estados import Robot, bug_2
 
-# ---------------------------------------------------------------------------
-# Configuracion
-# ---------------------------------------------------------------------------
-SIM_HOST = '127.0.0.1'
-SIM_PORT = 19999
-SIM_TIMEOUT = 5000
-SIM_RETRIES = 5
-
-POTENCIA = 1.0
-UMBRAL_LINEA = 110          # valor de color que distingue linea negra del suelo
-KP_SEGUIDOR = 0.005
-TIEMPO_RETROCESO = 0.8       # segundos de retroceso antes de girar
-DISTANCIA_PARED = 12           # distancia objetivo (cm) para rodeo de obstaculo
-
-# ---------------------------------------------------------------------------
-# Conexion y handles
-# ---------------------------------------------------------------------------
 print('[OK] Modulos cargados')
+
 print('Conectando a CoppeliaSim...')
+sim.simxFinish(-1)  # Cerrar conexiones previas
 
-<<<<<<< HEAD:Simulacion/simulacionLaberinto/ev3_sim.py
 clientID = sim.simxStart('127.0.0.1',19997,True,True,5000,5)
-=======
-sim.simxFinish(-1)
-clientID = sim.simxStart(SIM_HOST, SIM_PORT, True, True, SIM_TIMEOUT, SIM_RETRIES)
->>>>>>> a0f01d8306461434f9c72346b39c8f72ff11cfb9:Simulacion/simulacion/ev3_sim.py
 
-if clientID == -1:
+if clientID != -1:
+    print(f'[OK] Conectado. clientID={clientID}')
+else:
     print('[ERROR] No se pudo conectar. Verifica que CoppeliaSim esta abierto.')
     print('         Tambien verifica que el puerto legacy (19997) esta habilitado.')
-    sys.exit(1)
 
-print(f'[OK] Conectado. clientID={clientID}')
-
-
-def obtener_handle(nombre):
-    """Obtiene handle de un objeto en la escena por su nombre."""
+def get_handle(clientID, name):
+    """Obtiene handle de un objeto por nombre."""
     err, handle = sim.simxGetObjectHandle(
-        clientID, nombre, simConst.simx_opmode_blocking
+        clientID, name, simConst.simx_opmode_blocking
     )
     if err != simConst.simx_return_ok:
-        raise RuntimeError(f'No se encontro "{nombre}" (err={err})')
+        print(f'  WARN: No se encontro {name} (err={err})')
+        return -1
     return handle
 
+# Objetos del robot
+body = get_handle(clientID, 'ev3_body')
+motor_izq = get_handle(clientID, 'ev3_leftMotor')
+motor_der = get_handle(clientID, 'ev3_rightMotor')
+ultrasonido_sensor = get_handle(clientID, 'ev3_us')
+tactil_sensor = get_handle(clientID, 'ev3_tactil')
+color_sensor = get_handle(clientID, 'ev3_colorSensor')
 
-body = obtener_handle('ev3_body')
-motor_izq = obtener_handle('ev3_leftMotor')
-motor_der = obtener_handle('ev3_rightMotor')
-us_sensor = obtener_handle('ev3_us')
-tactil_sensor = obtener_handle('ev3_tactil')
-color_sensor = obtener_handle('ev3_colorSensor')
-
-<<<<<<< HEAD:Simulacion/simulacionLaberinto/ev3_sim.py
-=======
-
-# ---------------------------------------------------------------------------
-# Funciones de bajo nivel (sensores y actuadores)
-# ---------------------------------------------------------------------------
->>>>>>> a0f01d8306461434f9c72346b39c8f72ff11cfb9:Simulacion/simulacion/ev3_sim.py
 def set_motor_speed(left, right):
-    """Establece velocidad de las ruedas en rad/s."""
+    """Velocidad de ruedas en rad/s."""
     sim.simxSetJointTargetVelocity(clientID, motor_izq, left, simConst.simx_opmode_oneshot)
     sim.simxSetJointTargetVelocity(clientID, motor_der, right, simConst.simx_opmode_oneshot)
 
-
-def leer_proximidad(sensor):
-    """Lee sensor de proximidad. Retorna distancia en cm o 255 si no detecta."""
-    err, state, point, _, _ = sim.simxReadProximitySensor(
+def read_ultrasonic(sensor):
+    """Distancia del sensor ultrasonico en cm. 255 si no detecta."""
+    err, state, point, handle, normal = sim.simxReadProximitySensor(
         clientID, sensor, simConst.simx_opmode_streaming
     )
     if err == simConst.simx_return_ok and state:
-        dist = math.sqrt(point[0] ** 2 + point[1] ** 2 + point[2] ** 2)
+        dist = math.sqrt(point[0]**2 + point[1]**2 + point[2]**2)
         return round(dist * 100, 1)
     return 255
 
-<<<<<<< HEAD:Simulacion/simulacionLaberinto/ev3_sim.py
 def read_encoder(motor):
     err, pos = sim.simxGetJointPosition(
         clientID,
@@ -109,46 +71,44 @@ def tactil(sensor):
         return 1
     else:
         return 0
-=======
-
-def leer_tactil():
-    """Retorna True si el sensor tactil esta presionado (distancia < 3 cm)."""
-    return leer_proximidad(tactil_sensor) < 3
->>>>>>> a0f01d8306461434f9c72346b39c8f72ff11cfb9:Simulacion/simulacion/ev3_sim.py
 
 
-def leer_color():
+def read_color_reflection():
     """
-    Reflexion del sensor de color (0=negro ~100=blanco, >110=fuera de linea).
+    Reflexion del sensor de color (0=negro, 100=blanco).
     Analiza la region central de la imagen del vision sensor.
-    Retorna None si el sensor no esta disponible.
     """
     err, res, img = sim.simxGetVisionSensorImage(
         clientID, color_sensor, 0, simConst.simx_opmode_streaming
     )
     if err != simConst.simx_return_ok or res[0] == 0:
         return None
-
+    
+    # Convertir imagen 1D a array (RGB, [resX, resY])
     img_array = np.array(img, dtype=np.int32).reshape(res[1], res[0], 3)
-    gray = (0.299 * img_array[:, :, 0].astype(np.float32) +
-            0.587 * img_array[:, :, 1].astype(np.float32) +
-            0.114 * img_array[:, :, 2].astype(np.float32))
-    return round(float(np.mean(gray)) / 255.0 * 100.0, 2) + 100
+    
+    # Region central (~20%)
+    cx, cy = res[0], res[1]
+    m = min(res[0], res[1])
+    # Escala de grises ponderada
+    gray = (0.299 * img_array[:,:,0].astype(np.float32) +
+            0.587 * img_array[:,:,1].astype(np.float32) +
+            0.114 * img_array[:,:,2].astype(np.float32))
+    
+    return round(float(np.mean(gray)) / 255.0 * 100.0, 2)+100
 
 
-def leer_giro(giro_referencia):
-    """Angulo relativo de orientacion (yaw) en grados respecto a giro_referencia."""
+def read_gyro(giro_0):
+    """Angulo de orientacion en grados (yaw)."""
     err, euler = sim.simxGetObjectOrientation(
         clientID, body, -1, simConst.simx_opmode_streaming
     )
     if err == simConst.simx_return_ok:
-        angle = math.degrees(euler[2]) - giro_referencia
+        angle = math.degrees(euler[2])-giro_0
         return -round(((angle + 180) % 360) - 180, 1)
     return 0.0
 
-
-def resetear_giro():
-    """Lee el angulo absoluto (yaw) para usarlo como nuevo cero."""
+def reset_gyro():
     err, euler = sim.simxGetObjectOrientation(
         clientID, body, -1, simConst.simx_opmode_blocking
     )
@@ -156,90 +116,91 @@ def resetear_giro():
         return math.degrees(euler[2])
     return 0.0
 
-<<<<<<< HEAD:Simulacion/simulacionLaberinto/ev3_sim.py
-=======
+bot = bug_2()
 
-def limpiar_y_salir(signum=None, frame=None):
-    """Detiene motores y cierra conexion con CoppeliaSim."""
-    print('\n[INFO] Finalizando...')
-    try:
-        set_motor_speed(0, 0)
-    except Exception:
-        pass
-    sim.simxFinish(clientID)
-    sys.exit(0)
+giro_0 = reset_gyro()
 
+potencia = 0.7
 
-# ---------------------------------------------------------------------------
-# Mapa de estados a nombres legibles
-# ---------------------------------------------------------------------------
-NOMBRES_ESTADO = {
-    Robot.ESTADO_SEGUIR_LINEA: "SEGUIR_LINEA",
-    Robot.ESTADO_RODEO: "RODEO",
-    Robot.ESTADO_GIRO_IZQ: "GIRO_IZQ",
-    Robot.ESTADO_GIRO_DER: "GIRO_DER",
-    Robot.ESTADO_AVANCE_CIEGO: "AVANCE_CIEGO",
-    Robot.ESTADO_FINALIZAR: "FINALIZAR",
-    Robot.RETROCESO: "RETROCESO",
-    Robot.GIRO_SEGUIDOR: "GIRO_SEGUIDOR",
-}
+sim.simxGetJointPosition(clientID,motor_izq, simConst.simx_opmode_streaming)
+sim.simxGetJointPosition(clientID,motor_der, simConst.simx_opmode_streaming)
+enc_prev = None
+encoder_acumulado = 0
 
-#while True:
-#    print(leer_color())
-#    set_motor_speed(1, 1)
+lista_estados = [
+    "AVANCE",
+    "GIRO_DER",
+    "GIRO_IZQ",
+    "ENTRAR_PASILLO",
+    "RETROCESO"
+]
 
-# ---------------------------------------------------------------------------
-# Bucle principal
-# ---------------------------------------------------------------------------
-def main():
-    signal.signal(signal.SIGINT, limpiar_y_salir)
+while True:
+    bot.ultrasonido = read_ultrasonic(
+        ultrasonido_sensor
+    )
 
-    bot = bug_2()
-    giro_0 = resetear_giro()
-    print('[INFO] Iniciando Bug2...')
+    bot.tactil = tactil(
+        tactil_sensor
+    )
 
-    try:
-        while True:
-            # --- Leer sensores ---
-            bot.color = leer_color()
-            if bot.color is None:
-                bot.color = 100
+    bot.angulo = read_gyro(
+        giro_0
+    )
 
-            bot.tactil = 1 if leer_tactil() else 0
-            bot.ultrasonido = leer_proximidad(us_sensor)
-            bot.angulo = leer_giro(giro_0)
+    # ENCODER ACUMULADO
 
-            # --- Ejecutar maquina de estados ---
-            estado_anterior = bot.estado
-            error_pared = DISTANCIA_PARED - bot.ultrasonido if bot.estado == Robot.ESTADO_RODEO else 0
-            if bot.estado==Robot.ESTADO_SEGUIR_LINEA:
-                kp=1
-                print(bot.color)
-            if bot.estado == Robot.ESTADO_RODEO:
-                kp=KP_SEGUIDOR
-                print(round(error_pared,2), round(bot.izq,2), round(bot.der,2))
-            bot.states(POTENCIA, kp, UMBRAL_LINEA, error_pared, TIEMPO_RETROCESO, 0.3)
+    enc = read_encoder(motor_izq)
 
-            # --- Transicion entre estados ---
-            if estado_anterior != bot.estado:
-                bot.tiempo_inicial = time.time()
-                print(f'[ESTADO] -> {NOMBRES_ESTADO[bot.estado]}')
-                if bot.estado in (Robot.ESTADO_GIRO_IZQ, Robot.ESTADO_GIRO_DER, Robot.GIRO_SEGUIDOR):
-                    giro_0 = resetear_giro()
+    if enc != 255:
 
-            if bot.estado == Robot.ESTADO_FINALIZAR:
-                print('[INFO] Meta alcanzada. Finalizando.')
-                break
+        enc = math.degrees(enc)
 
-            # --- Actuar motores (se niega por polaridad del modelo simulado) ---
-            set_motor_speed(bot.der, bot.izq)
+        if enc_prev is None:
+            enc_prev = enc
 
-    except Exception as e:
-        print(f'[ERROR] {e}')
-    finally:
-        limpiar_y_salir()
+        delta = enc - enc_prev
+
+        if delta > 180:
+            delta -= 360
+        elif delta < -180:
+            delta += 360
+
+        encoder_acumulado += abs(delta)
+        enc_prev = enc
+
+    bot.encoder = encoder_acumulado
+
+    #STATES
+
+    estado_anterior = bot.estado
+
+    bot.states(potencia)
 
 
-if __name__ == '__main__':
-    main()
->>>>>>> a0f01d8306461434f9c72346b39c8f72ff11cfb9:Simulacion/simulacion/ev3_sim.py
+    # CAMBIO DE ESTADO
+
+    if estado_anterior != bot.estado:
+
+        print(lista_estados[bot.estado])
+
+        bot.tiempo_inicial = time.time()
+
+        encoder_acumulado = 0
+        bot.encoder = 0
+
+        if bot.estado in [
+            bot.GIRO_DER,
+            bot.GIRO_IZQ
+        ]:
+
+            giro_0 = reset_gyro()
+
+    #MOTORES
+
+    set_motor_speed(
+        -bot.der,
+        -bot.izq
+    )
+
+    time.sleep(0.02)

@@ -51,4 +51,87 @@ class Robot:
         print(self.estado) 
         return 0
 
+class bug_2(Robot):
 
+    AVANCE = 0
+    GIRO_DER = 1
+    GIRO_IZQ = 2
+    ENTRAR_PASILLO = 3
+    RETROCESO = 4 
+
+    def __init__(self):
+        super().__init__()
+
+        self.estado = self.AVANCE
+
+        self.encoder = 0
+
+        self.PARED_CERCANA = 8
+        self.FACTOR_SEGURIDAD = 2.0
+
+        self.contador_hueco = 0
+        self.MUESTRAS_HUECO = 3
+
+    def states(self, potencia):
+
+        # AVANCE NORMAL
+
+        if self.estado == self.AVANCE:
+            self.izq = potencia
+            self.der = potencia
+
+
+            #if self.ultrasonido > self.PARED_CERCANA * self.FACTOR_SEGURIDAD
+            #   self.estado = self.GIRO_DER
+
+
+            if self.ultrasonido > (self.PARED_CERCANA * self.FACTOR_SEGURIDAD):
+                self.contador_hueco += 1
+            else:
+                self.contador_hueco = 0
+
+            if self.contador_hueco >= self.MUESTRAS_HUECO:
+                self.contador_hueco = 0
+                self.estado = self.GIRO_DER
+
+            # Choque frontal
+            elif self.tactil == 1:
+                self.estado = self.RETROCESO
+
+
+        # GIRO DERECHA
+        elif self.estado == self.GIRO_DER:
+            self.izq = potencia
+            self.der = -potencia
+
+            if self.angulo >= 88:
+                self.estado = self.ENTRAR_PASILLO
+
+        # RETROCESO
+
+        elif self.estado == self.RETROCESO:
+            self.izq = -potencia
+            self.der = -potencia
+
+            if self.encoder >= 40:
+                self.estado = self.GIRO_IZQ
+            
+        # ENTRAR AL NUEVO PASILLO
+        elif self.estado == self.ENTRAR_PASILLO:
+            self.izq = potencia
+            self.der = potencia
+
+            #if self.ultrasonido <= self.PARED_CERCANA:
+            #   self.estado=self.AVANCE
+
+            if self.encoder >= 120:
+                self.estado = self.AVANCE
+
+
+        # GIRO IZQUIERDA
+        elif self.estado == self.GIRO_IZQ:
+            self.izq = -potencia
+            self.der = potencia
+
+            if self.angulo <= -88:
+                self.estado = self.AVANCE
