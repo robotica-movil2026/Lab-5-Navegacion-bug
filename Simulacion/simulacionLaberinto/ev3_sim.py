@@ -119,7 +119,7 @@ def reset_gyro():
 bot = bug_2()
 
 giro_0 = reset_gyro()
-
+kp = 0.005
 potencia = 0.7
 
 sim.simxGetJointPosition(clientID,motor_izq, simConst.simx_opmode_streaming)
@@ -147,39 +147,37 @@ while True:
     bot.angulo = read_gyro(
         giro_0
     )
-
+    #print(f"Angulo: {bot.angulo}")
     # ENCODER ACUMULADO
 
     enc = read_encoder(motor_izq)
+    if enc is not None:
+        if enc != 255:
 
-    if enc != 255:
+            enc = math.degrees(enc)
 
-        enc = math.degrees(enc)
+            if enc_prev is None:
+                enc_prev = enc
 
-        if enc_prev is None:
+            delta = enc - enc_prev
+
+            if delta > 180:
+                delta -= 360
+            elif delta < -180:
+                delta += 360
+
+            encoder_acumulado += abs(delta)
             enc_prev = enc
-
-        delta = enc - enc_prev
-
-        if delta > 180:
-            delta -= 360
-        elif delta < -180:
-            delta += 360
-
-        encoder_acumulado += abs(delta)
-        enc_prev = enc
 
     bot.encoder = encoder_acumulado
 
     #STATES
 
     estado_anterior = bot.estado
-
-    bot.states(potencia)
-
+    error = 0 - bot.angulo
+    bot.states(potencia,error,kp)
 
     # CAMBIO DE ESTADO
-
     if estado_anterior != bot.estado:
 
         print(lista_estados[bot.estado])
@@ -191,16 +189,12 @@ while True:
 
         if bot.estado in [
             bot.GIRO_DER,
-            bot.GIRO_IZQ
+            bot.GIRO_IZQ,
+            bot.AVANCE
+            #bot.RETROCESO
         ]:
 
             giro_0 = reset_gyro()
-
     #MOTORES
 
-    set_motor_speed(
-        -bot.der,
-        -bot.izq
-    )
-
-    time.sleep(0.02)
+    set_motor_speed(bot.izq,bot.der)

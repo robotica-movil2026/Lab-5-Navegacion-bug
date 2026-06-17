@@ -39,12 +39,14 @@ class Robot:
         return self.estado
             
     def lazo_motores(self, error, kp, potencia):
-        if self.angulo > 0:
+        if error < 0:
             self.izq = potencia + error * kp
             self.der = potencia - error * kp
+            #print(f"Error: {error}, {self.izq>self.der}")
         else:
-            self.izq = potencia - error * kp
-            self.der = potencia + error * kp
+            self.izq = potencia + error * kp
+            self.der = potencia - error * kp
+            #print(f"Error: {error}, {self.izq>self.der}")
 
     def print_atributos(self):
         #print(f"Izquierda: {self.izq}, Derecha: {self.der}, Angulo: {self.angulo}, Color: {self.color}, Tactil: {self.tactil}, Ultrasonido: {self.ultrasonido}, Tiempo: {self.tiempo_inicial}, Estado: {self.estado}")
@@ -66,26 +68,23 @@ class bug_2(Robot):
 
         self.encoder = 0
 
-        self.PARED_CERCANA = 8
-        self.FACTOR_SEGURIDAD = 2.0
+        self.PARED_CERCANA = 10
+        self.FACTOR_SEGURIDAD = 2.5
 
         self.contador_hueco = 0
-        self.MUESTRAS_HUECO = 3
+        self.MUESTRAS_HUECO = 100
 
-    def states(self, potencia):
+    def states(self, potencia, error, kp):
 
         # AVANCE NORMAL
 
         if self.estado == self.AVANCE:
-            self.izq = potencia
-            self.der = potencia
-
-
+            self.lazo_motores(error, kp, potencia)
             #if self.ultrasonido > self.PARED_CERCANA * self.FACTOR_SEGURIDAD
             #   self.estado = self.GIRO_DER
 
-
-            if self.ultrasonido > (self.PARED_CERCANA * self.FACTOR_SEGURIDAD):
+            if self.ultrasonido > (self.PARED_CERCANA * self.FACTOR_SEGURIDAD) and self.tiempo_inicial > 25:
+                print(self.ultrasonido)
                 self.contador_hueco += 1
             else:
                 self.contador_hueco = 0
@@ -95,8 +94,7 @@ class bug_2(Robot):
                 self.estado = self.GIRO_DER
 
             # Choque frontal
-            elif self.tactil == 1:
-                self.estado = self.RETROCESO
+            self.transiciones(self.RETROCESO,self.tactil == 1)
 
 
         # GIRO DERECHA
@@ -104,7 +102,7 @@ class bug_2(Robot):
             self.izq = potencia
             self.der = -potencia
 
-            if self.angulo >= 88:
+            if self.angulo >= 87:
                 self.estado = self.ENTRAR_PASILLO
 
         # RETROCESO
@@ -113,7 +111,7 @@ class bug_2(Robot):
             self.izq = -potencia
             self.der = -potencia
 
-            if self.encoder >= 40:
+            if self.encoder >= 80:
                 self.estado = self.GIRO_IZQ
             
         # ENTRAR AL NUEVO PASILLO
@@ -121,11 +119,11 @@ class bug_2(Robot):
             self.izq = potencia
             self.der = potencia
 
-            #if self.ultrasonido <= self.PARED_CERCANA:
-            #   self.estado=self.AVANCE
+            if self.ultrasonido <= self.PARED_CERCANA:
+               self.estado=self.AVANCE
 
-            if self.encoder >= 120:
-                self.estado = self.AVANCE
+            #if self.encoder >= 120:
+            #    self.estado = self.AVANCE
 
 
         # GIRO IZQUIERDA
@@ -133,5 +131,6 @@ class bug_2(Robot):
             self.izq = -potencia
             self.der = potencia
 
-            if self.angulo <= -88:
+            if self.angulo <= -87.5:
+                print(self.angulo)
                 self.estado = self.AVANCE
