@@ -119,8 +119,8 @@ def reset_gyro():
 bot = bug_2()
 
 giro_0 = reset_gyro()
-kp = 0.005
-potencia = 0.7
+kp = 0.007
+potencia = 1.0
 
 sim.simxGetJointPosition(clientID,motor_izq, simConst.simx_opmode_streaming)
 sim.simxGetJointPosition(clientID,motor_der, simConst.simx_opmode_streaming)
@@ -149,7 +149,7 @@ while True:
     )
     #print(f"Angulo: {bot.angulo}")
     # ENCODER ACUMULADO
-
+    print(bot.angulo)
     enc = read_encoder(motor_izq)
     if enc is not None:
         if enc != 255:

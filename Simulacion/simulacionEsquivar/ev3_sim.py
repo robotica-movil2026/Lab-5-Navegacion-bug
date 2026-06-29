@@ -197,7 +197,7 @@ while True:
 
 
     # RESETS AL CAMBIAR DE ESTADO
-
+    print(lista_estados[bot.estado])
     if estado_anterior != bot.estado:
 
         bot.tiempo_inicial = time.time()
@@ -223,6 +223,6 @@ while True:
     
     #APLICAR POTENCIA
     set_motor_speed(
-        -bot.der,
-        -bot.izq
+        bot.der,
+        bot.izq
     )

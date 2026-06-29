@@ -72,7 +72,7 @@ class bug_2(Robot):
         self.FACTOR_SEGURIDAD = 2.5
 
         self.contador_hueco = 0
-        self.MUESTRAS_HUECO = 100
+        self.MUESTRAS_HUECO = 5000
 
     def states(self, potencia, error, kp):
 
@@ -99,17 +99,17 @@ class bug_2(Robot):
 
         # GIRO DERECHA
         elif self.estado == self.GIRO_DER:
-            self.izq = potencia
-            self.der = -potencia
+            self.izq = potencia*0.6
+            self.der = -potencia*0.6
 
-            if self.angulo >= 87:
+            if self.angulo >= 88:
+                print(self.angulo)
                 self.estado = self.ENTRAR_PASILLO
 
         # RETROCESO
 
         elif self.estado == self.RETROCESO:
-            self.izq = -potencia
-            self.der = -potencia
+            self.lazo_motores(error, kp, -1*potencia)
 
             if self.encoder >= 80:
                 self.estado = self.GIRO_IZQ
@@ -119,7 +119,7 @@ class bug_2(Robot):
             self.izq = potencia
             self.der = potencia
 
-            if self.ultrasonido <= self.PARED_CERCANA:
+            if self.ultrasonido <= self.PARED_CERCANA * self.FACTOR_SEGURIDAD:
                self.estado=self.AVANCE
 
             #if self.encoder >= 120:
@@ -128,9 +128,9 @@ class bug_2(Robot):
 
         # GIRO IZQUIERDA
         elif self.estado == self.GIRO_IZQ:
-            self.izq = -potencia
-            self.der = potencia
+            self.izq = -potencia*0.5
+            self.der = potencia*0.5
 
-            if self.angulo <= -87.5:
+            if self.angulo <= -88:
                 print(self.angulo)
                 self.estado = self.AVANCE
