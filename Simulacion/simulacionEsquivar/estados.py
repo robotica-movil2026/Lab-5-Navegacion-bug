@@ -37,6 +37,8 @@ class Robot:
         self.tiempo_inicial = 0.0
         self.infra = 0.0
         self.error_integral = 0.0
+        self.ang_izq=0.0
+        self.ang_der=0.0
 
     def transiciones(self, objetivo, condicion):
         """Transita al estado objetivo si la condicion se cumple."""
@@ -68,6 +70,14 @@ class Robot:
 
 
 class bug_2(Robot):
+    def __init__(self):
+        super().__init__()
+        self.Angulo_seguimiento = 120
+        self.Umbral_final=70
+        self.Angulo_rotacion=90
+        self.distancia_objetivo=20
+        self.distancia_recuperacion=50
+
     """
     Implementacion del algoritmo Bug2.
     Combina seguidor de linea con rodeo de obstaculos usando wall-following.
@@ -93,32 +103,34 @@ class bug_2(Robot):
             else:
                 self.der = potencia + kp
                 self.izq = potencia - kp
-            self.transiciones(self.ESTADO_FINALIZAR, self.color < 70)
+            self.transiciones(self.ESTADO_FINALIZAR, self.color < self.Umbral_final)
             self.transiciones(self.RETROCESO, self.tactil == 1)
 
         elif self.estado == self.ESTADO_RODEO:
             # Wall-following: mantener distancia lateral al obstaculo
             self.lazo_motores(error_pared, kp, ki, potencia, max_dif)
-            self.transiciones(self.ESTADO_FINALIZAR, self.color < 70)
+            self.transiciones(self.ESTADO_FINALIZAR, self.color < self.Umbral_final)
             self.transiciones(self.GIRO_SEGUIDOR, self.color > umbral)
-            self.transiciones(self.AVANCE_2, self.infra > 20)
+            self.transiciones(self.AVANCE_2, self.infra > self.distancia_objetivo)
 
         elif self.estado == self.ESTADO_GIRO_IZQ:
             self.izq = -potencia
             self.der = potencia
-            self.transiciones(self.ESTADO_RODEO, self.angulo <= -90)
+            self.transiciones(self.ESTADO_RODEO, self.ang_izq <=-self.Angulo_rotacion
+                                            and self.ang_der >= self.Angulo_rotacion)
 
         elif self.estado == self.ESTADO_GIRO_DER:
             self.izq = potencia
             self.der = -potencia
             self.transiciones(self.GIRO_SEGUIDOR, self.color > umbral)
-            self.transiciones(self.ESTADO_AVANCE_CIEGO, self.angulo > 90)
+            self.transiciones(self.ESTADO_AVANCE_CIEGO, self.ang_der <= -self.Angulo_rotacion
+                                                and self.ang_izq >= self.Angulo_rotacion)
 
         elif self.estado == self.ESTADO_AVANCE_CIEGO:
             self.izq = potencia
             self.der = potencia
             self.transiciones(self.GIRO_SEGUIDOR, self.color > umbral)
-            self.transiciones(self.ESTADO_RODEO, self.infra <= 50)
+            self.transiciones(self.ESTADO_RODEO, self.infra <= self.distancia_recuperacion)
 
         elif self.estado == self.RETROCESO:
             self.izq = -potencia
@@ -136,9 +148,101 @@ class bug_2(Robot):
         elif self.estado == self.GIRO_SEGUIDOR:
             self.izq = -potencia
             self.der = potencia
-            self.transiciones(self.ESTADO_FINALIZAR, self.color < 70)
-            self.transiciones(self.ESTADO_SEGUIR_LINEA, self.angulo <= -70)
+            self.transiciones(self.ESTADO_FINALIZAR, self.color < self.Umbral_final)
+            self.transiciones(self.ESTADO_SEGUIR_LINEA, self.ang_izq <=-self.Angulo_seguimiento
+                                            and self.ang_der >= self.Angulo_seguimiento)
 
         elif self.estado == self.ESTADO_FINALIZAR:
             self.izq = 0
             self.der = 0
+
+
+
+class laberinto(Robot):
+    def __init__(self):
+        super().__init__()
+        self.Angulo_seguimiento = 120
+        self.Umbral_final=70
+        self.Angulo_rotacion=90
+        self.distancia_objetivo=20
+        self.distancia_recuperacion=50
+
+    """
+    Implementacion del algoritmo Bug2.
+    Combina seguidor de linea con rodeo de obstaculos usando wall-following.
+    """
+
+    def states(self, potencia, kp, ki, umbral, error_pared, tiempo_fin, max_dif):
+        """
+        Ejecuta la logica correspondiente al estado actual.
+
+        Args:
+            potencia: velocidad base de los motores.
+            kp: ganancia proporcional del controlador de pared.
+            ki: ganancia integral del controlador de pared.
+            umbral: valor de color que distingue linea negra del suelo (110).
+            error_pared: error de distancia para el estado RODEO.
+            tiempo_fin: duracion del retroceso en segundos.
+        """
+        if self.estado == self.ESTADO_SEGUIR_LINEA:
+            # Correccion proporcional para mantener la linea bajo el sensor
+            if self.color < umbral:
+                self.izq = potencia + kp
+                self.der = potencia - kp
+            else:
+                self.der = potencia + kp
+                self.izq = potencia - kp
+            self.transiciones(self.ESTADO_FINALIZAR, self.color < self.Umbral_final)
+            self.transiciones(self.RETROCESO, self.tactil == 1)
+
+        elif self.estado == self.ESTADO_RODEO:
+            # Wall-following: mantener distancia lateral al obstaculo
+            self.lazo_motores(error_pared, kp, ki, potencia, max_dif)
+            self.transiciones(self.ESTADO_FINALIZAR, self.color < self.Umbral_final)
+            self.transiciones(self.RETROCESO, self.tactil == 1)
+            self.transiciones(self.GIRO_SEGUIDOR, self.color > umbral)
+            self.transiciones(self.AVANCE_2, self.infra > self.distancia_objetivo and self.infra !=255 and self.ultrasonido!=255)
+
+        elif self.estado == self.ESTADO_GIRO_IZQ:
+            self.izq = -potencia
+            self.der = potencia
+            self.transiciones(self.ESTADO_RODEO, self.ang_izq <= -self.Angulo_rotacion
+                                            and self.ang_der >= self.Angulo_rotacion)
+
+        elif self.estado == self.ESTADO_GIRO_DER:
+            self.izq = potencia
+            self.der = -potencia
+            self.transiciones(self.GIRO_SEGUIDOR, self.color > umbral)
+            self.transiciones(self.ESTADO_AVANCE_CIEGO, self.ang_der <= -self.Angulo_rotacion
+                                                and self.ang_izq >= self.Angulo_rotacion)
+
+        elif self.estado == self.ESTADO_AVANCE_CIEGO:
+            self.izq = potencia
+            self.der = potencia
+            self.transiciones(self.GIRO_SEGUIDOR, self.color > umbral)
+            self.transiciones(self.ESTADO_RODEO, self.infra <= self.distancia_recuperacion)
+
+        elif self.estado == self.RETROCESO:
+            self.izq = -potencia
+            self.der = -potencia
+            self.transiciones(
+                self.ESTADO_GIRO_IZQ,
+                tiempo_fin < (time.time() - self.tiempo_inicial),
+            )
+
+        elif self.estado == self.AVANCE_2:
+            self.izq = potencia
+            self.der = potencia
+            self.transiciones(self.ESTADO_GIRO_DER, tiempo_fin < (time.time() - self.tiempo_inicial))
+        
+        elif self.estado == self.GIRO_SEGUIDOR:
+            self.izq = -potencia
+            self.der = potencia
+            self.transiciones(self.ESTADO_FINALIZAR, self.color < self.Umbral_final)
+            self.transiciones(self.ESTADO_SEGUIR_LINEA, self.ang_izq <= -self.Angulo_seguimiento
+                                            and self.ang_der >= self.Angulo_seguimiento)
+
+        elif self.estado == self.ESTADO_FINALIZAR:
+            self.izq = 0
+            self.der = 0
+#-1.5,+1.35,0.045
