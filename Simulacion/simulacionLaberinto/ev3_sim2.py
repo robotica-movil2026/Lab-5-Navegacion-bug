@@ -6,7 +6,7 @@ import math
 import numpy as np
 import sim
 import simConst
-from estados2 import bug_2
+from estados import laberinto
 
 print('[OK] Modulos cargados')
 
@@ -134,7 +134,7 @@ def reset_gyro():
         return math.degrees(euler[2])
     return 0.0
 
-bot = bug_2()
+bot = laberinto()
 
 giro_0 = reset_gyro()
 gyro_prev = None

@@ -4,12 +4,12 @@ from pybricks.ev3devices import Motor, ColorSensor, UltrasonicSensor, TouchSenso
 from pybricks.parameters import Port
 
 
-from Estados import bug_2
+from Estados import laberinto
 #import time
 import math
 #import numpy as np
 
-bot = bug_2()
+bot = laberinto()
 
 ev3 = EV3Brick()
 

@@ -126,16 +126,6 @@ class bug_2(Robot):
                 self.anguloobjetivo = self.anguloobjetivo-90
 
 
-
-        elif self.estado == self.ESTADO_GIRO_DER:
-            self.izq = potencia
-            self.der = -potencia
-
-            if self.angulo >= 85:
-                self.estado = self.ESTADO_AVANCE_CIEGO
-
-
-
         elif self.estado == self.ESTADO_AVANCE_CIEGO:
             self.izq = potencia
             self.der = potencia

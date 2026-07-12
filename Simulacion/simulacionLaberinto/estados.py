@@ -29,6 +29,7 @@ class Robot:
         self.tiempo_inicial = 0
         self.meta = 0
         self.encoder = 0
+        self.anguloobjetivo = 0
         self.encoder_inicio = 0
         self.contador_sin_pared = 0
         self.contador_linea = 0
@@ -39,7 +40,7 @@ class Robot:
         return self.estado
             
     def lazo_motores(self, error, kp, potencia):
-        if error < 0:
+        if error < self.anguloobjetivo:
             self.izq = potencia + error * kp
             self.der = potencia - error * kp
             #print(f"Error: {error}, {self.izq>self.der}")
@@ -53,7 +54,7 @@ class Robot:
         print(self.estado) 
         return 0
 
-class bug_2(Robot):
+class laberinto(Robot):
 
     AVANCE = 0
     GIRO_DER = 1
@@ -80,11 +81,9 @@ class bug_2(Robot):
 
         if self.estado == self.AVANCE:
             self.lazo_motores(error, kp, potencia)
-            #if self.ultrasonido > self.PARED_CERCANA * self.FACTOR_SEGURIDAD
-            #   self.estado = self.GIRO_DER
 
             if self.ultrasonido > (self.PARED_CERCANA * self.FACTOR_SEGURIDAD) and self.tiempo_inicial > 25:
-                print(self.ultrasonido)
+                #print(self.ultrasonido)
                 self.contador_hueco += 1
             else:
                 self.contador_hueco = 0
@@ -99,12 +98,12 @@ class bug_2(Robot):
 
         # GIRO DERECHA
         elif self.estado == self.GIRO_DER:
-            self.izq = potencia*0.6
-            self.der = -potencia*0.6
-
-            if self.angulo >= 88:
-                print(self.angulo)
+            self.izq = potencia
+            self.der = -potencia
+            
+            if self.angulo >= self.anguloobjetivo+90:
                 self.estado = self.ENTRAR_PASILLO
+                self.anguloobjetivo = self.anguloobjetivo + 90
 
         # RETROCESO
 
@@ -122,15 +121,11 @@ class bug_2(Robot):
             if self.ultrasonido <= self.PARED_CERCANA * self.FACTOR_SEGURIDAD:
                self.estado=self.AVANCE
 
-            #if self.encoder >= 120:
-            #    self.estado = self.AVANCE
-
-
         # GIRO IZQUIERDA
         elif self.estado == self.GIRO_IZQ:
-            self.izq = -potencia*0.5
-            self.der = potencia*0.5
+            self.izq = -potencia
+            self.der = potencia
 
-            if self.angulo <= -88:
-                print(self.angulo)
+            if self.angulo <= self.anguloobjetivo-90:
                 self.estado = self.AVANCE
+                self.anguloobjetivo = self.anguloobjetivo - 90

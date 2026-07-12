@@ -54,7 +54,7 @@ class Robot:
         print(self.estado) 
         return 0
 
-class bug_2(Robot):
+class laberinto(Robot):
 
     AVANCE = 0
     GIRO_DER = 1
