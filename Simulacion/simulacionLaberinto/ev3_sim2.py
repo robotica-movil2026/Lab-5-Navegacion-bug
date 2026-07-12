@@ -98,15 +98,33 @@ def read_color_reflection():
     return round(float(np.mean(gray)) / 255.0 * 100.0, 2)+100
 
 def read_gyro(giro_0):
+    global gyro_prev, gyro_abs
 
-    """Angulo de orientacion en grados (yaw)."""
     err, euler = sim.simxGetObjectOrientation(
         clientID, body, -1, simConst.simx_opmode_streaming
     )
-    if err == simConst.simx_return_ok:
-        angle = math.degrees(euler[2])-giro_0
-        return -round(angle,1)#-round(((angle + 180) % 360) - 180, 1)
-    return 0.0
+
+    if err != simConst.simx_return_ok:
+        return gyro_abs
+
+    angle = -(math.degrees(euler[2]) - giro_0)
+
+    if gyro_prev is None:
+        gyro_prev = angle
+        return 0.0
+
+    delta = angle - gyro_prev
+
+    # Corrige el salto de +180 a -180
+    if delta > 180:
+        delta -= 360
+    elif delta < -180:
+        delta += 360
+
+    gyro_abs += delta
+    gyro_prev = angle
+
+    return round(gyro_abs, 1)
 
 def reset_gyro():
     err, euler = sim.simxGetObjectOrientation(
@@ -119,6 +137,8 @@ def reset_gyro():
 bot = bug_2()
 
 giro_0 = reset_gyro()
+gyro_prev = None
+gyro_abs = 0
 kp = 0.009
 potencia = 1.0
 
@@ -177,6 +197,8 @@ while True:
     error = bot.anguloobjetivo - bot.angulo
     bot.states(potencia,error,kp)
 
+    if bot.angulo > 80 and bot.angulo <95:
+        print(bot.angulo)
     # CAMBIO DE ESTADO
     if estado_anterior != bot.estado:
 

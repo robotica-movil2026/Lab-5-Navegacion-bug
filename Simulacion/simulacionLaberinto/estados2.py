@@ -83,7 +83,7 @@ class bug_2(Robot):
             self.lazo_motores(error, kp, potencia)
 
             if self.ultrasonido > (self.PARED_CERCANA * self.FACTOR_SEGURIDAD) and self.tiempo_inicial > 25:
-                print(self.ultrasonido)
+                #print(self.ultrasonido)
                 self.contador_hueco += 1
             else:
                 self.contador_hueco = 0
@@ -100,7 +100,7 @@ class bug_2(Robot):
         elif self.estado == self.GIRO_DER:
             self.izq = potencia
             self.der = -potencia
-
+            
             if self.angulo >= self.anguloobjetivo+90:
                 self.estado = self.ENTRAR_PASILLO
                 self.anguloobjetivo = self.anguloobjetivo + 90

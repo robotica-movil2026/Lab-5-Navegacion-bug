@@ -29,6 +29,7 @@ class Robot:
         self.tiempo_inicial = 0
         self.meta = 0
         self.encoder = 0
+        self.anguloobjetivo = 0
         self.encoder_inicio = 0
         self.contador_sin_pared = 0
         self.contador_linea = 0
@@ -39,7 +40,7 @@ class Robot:
         return self.estado
             
     def lazo_motores(self, error, kp, potencia):
-        if self.angulo > 0:
+        if self.angulo > self.anguloobjetivo:
             self.izq = potencia + error * kp
             self.der = potencia - error * kp
         else:
@@ -73,7 +74,7 @@ class bug_2(Robot):
                 self.der = potencia + KP
                 self.izq = potencia - KP
 
-            self.transiciones(self.ESTADO_FINALIZAR,self.color > 200)
+            self.transiciones(self.ESTADO_FINALIZAR,self.color == 100.68)
             self.transiciones(self.RETROCESO,self.tactil == 1)
 
 
@@ -90,7 +91,8 @@ class bug_2(Robot):
             if self.ultrasonido > 30:
                 self.estado = self.AVANCE_ESQUINA
 
-
+            self.transiciones(self.ESTADO_FINALIZAR,self.color == 100.68)
+            self.transiciones(self.RETROCESO,self.tactil == 1)
 
         elif self.AVANCE_ESQUINA == self.estado:
 
@@ -100,14 +102,18 @@ class bug_2(Robot):
             if self.encoder > 90:
                 self.estado = self.GIRO_BUSCA_PARED
 
+            self.transiciones(self.ESTADO_FINALIZAR,self.color == 100.68)
+            self.transiciones(self.RETROCESO,self.tactil == 1)
+
 
 
         elif self.estado == self.GIRO_BUSCA_PARED:
             self.izq = potencia
             self.der = -potencia
 
-            if self.angulo >= 85:
+            if self.angulo >= self.anguloobjetivo+90:
                 self.estado = self.ESTADO_AVANCE_CIEGO
+                self.anguloobjetivo += 90
 
 
 
@@ -115,8 +121,9 @@ class bug_2(Robot):
             self.izq = -potencia
             self.der = potencia
 
-            if self.angulo <= -85:
+            if self.angulo <= self.anguloobjetivo-90:
                 self.estado = self.ESTADO_RODEO
+                self.anguloobjetivo = self.anguloobjetivo-90
 
 
 
@@ -133,7 +140,7 @@ class bug_2(Robot):
             self.izq = potencia
             self.der = potencia
 
-            if self.ultrasonido <= 50:
+            if self.ultrasonido <= 25:
                 self.estado = self.ESTADO_RODEO
 
 
@@ -173,6 +180,7 @@ class bug_2(Robot):
 
             if self.color > umbral:
                 self.estado = self.ESTADO_SEGUIR_LINEA
+                self.anguloobjetivo = 0
 
 
         elif self.estado == self.AVANCE_LINEA_2:
@@ -186,4 +194,6 @@ class bug_2(Robot):
         #TERMINAR
 
         elif self.estado == self.ESTADO_FINALIZAR:
+            self.izq = 0
+            self.der = 0
             return self.ESTADO_FINALIZAR
