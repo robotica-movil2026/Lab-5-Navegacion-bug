@@ -340,6 +340,8 @@ FIN BUCLE
 
 ### 3.5. Video de resultados
 
+La implementación en laboratorio no se consiguio, lo mostrado en el video es la simulacion, se añade adicionalmente el archivo de simulación en coppeliasim (.ttt).
+
 <a href="https://www.youtube.com/watch?v=rygYJ9ZeQQE">
 <img src="https://img.youtube.com/vi/rygYJ9ZeQQE/0.jpg" alt="Mision 2 Laberinto" width="600">
 </a>
@@ -404,42 +406,6 @@ Puerto S2 → TouchSensor (táctil frontal)
 Puerto S3 → UltrasonicSensor (ultrasonido lateral/frontal)
 Puerto S4 → ColorSensor (reflexión, orientado hacia abajo)
 ```
-
----
-
-## 5. Marco Teórico — Resolución de Preguntas de la Guía
-
-### 5.1. Características de los tipos de navegación
-
-**Navegación planeada (deliberativa):**
-1. **Requiere un modelo del entorno:** El robot necesita un mapa o representación interna del espacio para planificar rutas con algoritmos como A* o Dijkstra. Esto permite rutas óptimas pero es vulnerable a cambios no previstos en el entorno.
-2. **Tiene un componente de planificación separado del de ejecución:** El robot "piensa" la ruta antes de ejecutarla, lo que introduce un tiempo de procesamiento y lo hace menos reactivo ante cambios dinámicos.
-
-**Navegación basada en comportamientos (reativa):**
-1. **Descomposición en comportamientos modulares:** La tarea compleja se divide en sub-tareas simples (evitar obstáculo, seguir línea, girar) que se ejecutan concurrentemente y se activan por condiciones sensoriales. Esto permite respuestas rápidas y adaptativas.
-2. **No requiere mapa completo del entorno:** El robot navega usando únicamente información sensorial local (ultrasonido, tactil, color), lo que lo hace más robusto en entornos desconocidos o dinámicos, aunque menos eficiente en rutas largas.
-
-### 5.2. Investigaciones de Rodney Brooks y Mark Tilden
-
-**Rodney Brooks:** Pionero de la robótica basada en comportamientos en el MIT. Desarrolló la **arquitectura de subsumción** (1986), donde comportamientos de bajo nivel (evitar obstáculos) tienen prioridad sobre los de alto nivel (planificación), organizados en capas jerárquicas. Creó robots como el **Genghis** (hexápodo insectoide) y co-fundó **iRobot** (creador del Roomba), demostrando que comportamientos simples generan inteligencia emergente.
-
-**Mark Tilden:** Desarrolló la filosofía **BEAM** (Biology, Electronics, Aesthetics, Mechanics), creando robots con circuitos analógicos simples en lugar de microcontroladores. Sus robots **Bicore** y **Nervous Network** usaban redes de transistores para generar comportamientos emergentes (seguimiento de luz, evitación de obstáculos). Comercializó robots como el **Robosapien** con WowWee, llevando la robótica de comportamiento al mercado masivo.
-
-### 5.3. Tres algoritmos de planificación de rutas
-
-1. **Algoritmos Bug (Bug0, Bug1, Bug2):** Navegación reactiva que combina avance directo con rodeo de obstáculos. El robot avanza hacia la meta y al encontrar un obstáculo, lo rodea hasta poder retomar el camino directo.
-2. **Campos de Potencial (Potential Fields):** El robot es atraído por un potencial negativo en la meta y repelido por potenciales positivos en los obstáculos. La resultante de fuerzas determina la dirección de movimiento.
-3. **RRT (Rapidly-exploring Random Trees):** Construye un árbol de trayectorias aleatorias que expande rápidamente el espacio de configuración. Es eficiente en espacios de alta dimensionalidad y con obstáculos complejos.
-
-### 5.4. Descripción de algoritmos Bug
-
-- **Bug 0:** Avanza en línea recta hacia la meta. Al chocar, rodea el obstáculo (wall-following) hasta que la línea recta está libre, sin memoria del recorrido.
-- **Bug 1:** Registra el "hit point" (punto de contacto) y busca el "leave point" más cercano a la meta a lo largo del perímetro. Garantiza no recorrer más perímetro del necesario.
-- **Bug 2:** Define una m-line (línea recta origen-meta). Rodea el obstáculo hasta volver a cruzar la m-line más cerca de la meta que el punto de entrada. Más eficiente que Bug 1 al permitir solo una re-entrada por obstáculo.
-
-### 5.5. Algoritmo de resolución de laberintos: Wall-Following
-
-El algoritmo **Wall-Following** (seguimiento de pared) resuelve laberintos simplemente conexos manteniendo contacto con una pared (derecha o izquierda). Las reglas son: si la pared lateral está presente, avanza recto; si desaparece, gira hacia ella; si hay pared frontal, gira en sentido contrario. Garantiza encontrar la salida sin necesidad de memoria ni mapa, explorando todo el perímetro de los pasillos.
 
 ---
 
